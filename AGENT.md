@@ -40,9 +40,11 @@ All `{{placeholders}}` in this file and `REPO_CONTEXT.md` are resolved from `pro
 | `{{jcr.contentRoot}}` | `jcr.contentRoot` | `/content/mysite` |
 | `{{jcr.confRoot}}` | `jcr.confRoot` | `/conf/mysite` |
 | `{{jcr.contentLangRoot}}` | `jcr.contentLangRoot` | `/content/mysite/us/en` |
+| `{{jcr.testPagesRoot}}` | `jcr.testPagesRoot` | `/content/mysite/us/en/test-pages` |
 | `{{jcr.componentPath}}` | `jcr.componentPath` | `/apps/mysite/components` |
 | `{{jcr.clientlibPath}}` | `jcr.clientlibPath` | `/apps/mysite/clientlibs` |
 | `{{components.group}}` | `components.group` | `My Site - Content` |
+| `{{components.resourceTypeBase}}` | `components.resourceTypeBase` | `mysite/components` |
 | `{{components.pageResourceType}}` | `components.pageResourceType` | `mysite/components/page` |
 | `{{components.containerResourceType}}` | `components.containerResourceType` | `mysite/components/container` |
 | `{{components.pageTemplate}}` | `components.pageTemplate` | `/conf/mysite/settings/wcm/templates/page-content` |
@@ -59,6 +61,7 @@ All `{{placeholders}}` in this file and `REPO_CONTEXT.md` are resolved from `pro
 | `{{build.deployBundleProfile}}` | `build.deployBundleProfile` | `autoInstallBundle` |
 | `{{testing.framework}}` | `testing.framework` | `junit5` |
 | `{{java.testContextClass}}` | `java.testContextClass` | `AppAemContext` |
+| `{{git.defaultBranch}}` | `git.defaultBranch` | `main` |
 
 Rules:
 - Work **iteratively and autonomously**
@@ -107,6 +110,7 @@ For the given feature request, identify ALL artifacts needed:
 | Templates/Policies | `{{modules.uiContent}}/src/main/content/jcr_root{{jcr.confRoot}}/settings/wcm/` |
 | Content | `{{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentRoot}}/` |
 | OSGi Configs | `{{modules.uiConfig}}/src/main/content/jcr_root{{jcr.appsRoot}}/osgiconfig/` |
+| Editable Template Policies | `{{modules.uiContent}}/src/main/content/jcr_root{{jcr.confRoot}}/settings/wcm/policies/` |
 | Unit Tests | `{{java.testRoot}}/{{java.basePackagePath}}/` |
 
 **Infer missing details from repo patterns. Only ask the user if truly blocked.**
@@ -154,8 +158,9 @@ Rules:
 - **Tests**: Use `{{testing.framework}}` + AEM Mocks via `{{java.testContextClass}}.newAemContext()`
 - **Clientlibs**: Category naming `{{components.clientlibPrefix}}.{name}`, `allowProxy=true`
 - **Package names**: `{{java.basePackage}}.{models|services|servlets|schedulers|listeners|filters}`
+- **Editable templates/policies**: Inspect existing template + policy mappings first; only add or update policy nodes when the component is not already allowed
 
-Use `insert_edit_into_file` for all file creation/modification. **Never print codeblocks — always use the tool.**
+Use the available file editing tool for all file creation/modification. **Do not stop at pseudocode or codeblocks when you can edit the repo directly.**
 
 **AEM Version-Specific Coding Rules:**
 
@@ -242,20 +247,30 @@ ELSE IF (feature is a service / scheduler / listener / filter) {
 
 #### Approach A — File-based test page (DEFAULT for all components)
 
-Create a **new child page** under the content lang root.
+Create a **new child page** under the dedicated test-pages root.
 
 The `ui.content` filter typically uses `mode="merge"` for `{{jcr.contentRoot}}`, so new child pages are auto-included with **no filter changes needed**.
 
 **If `build.contentFilterMode` is `replace`**, you MUST add a filter entry or the page will be deleted on next install. Check `project.yaml` before proceeding.
 
+**Root resolution rules:**
+- If `{{jcr.testPagesRoot}}` is present and sensible, use it.
+- If `{{jcr.testPagesRoot}}` does not exist yet but `{{jcr.contentLangRoot}}` is valid, create `{{jcr.testPagesRoot}}` first and place all agent pages beneath it.
+- If neither the language root nor test page root is trustworthy, ask the user **one concise question** for the authoring root path (for example `/content/site/us/en` or `/content/site/en`). Then create `/test-pages` beneath that path and continue.
+
 **Steps:**
 
-1. **Create the page directory** at:
+1. **Ensure the test-pages root exists** at:
    ```
-   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/agent-test-{feature-name}/
+   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/
    ```
 
-2. **Create `.content.xml`** inside that directory:
+2. **Create the page directory** at:
+   ```
+   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/agent-test-{feature-name}/
+   ```
+
+3. **Create `.content.xml`** inside that directory:
 
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>
@@ -284,13 +299,13 @@ The `ui.content` filter typically uses `mode="merge"` for `{{jcr.contentRoot}}`,
                        <!-- Instance 1: All fields populated (happy path) -->
                        <{componentName}_full
                            jcr:primaryType="nt:unstructured"
-                           sling:resourceType="{{jcr.componentPath}}/{componentName}"
+                           sling:resourceType="{{components.resourceTypeBase}}/{componentName}"
                            ... />
 
                        <!-- Instance 2: Minimal / empty (edge case) -->
                        <{componentName}_empty
                            jcr:primaryType="nt:unstructured"
-                           sling:resourceType="{{jcr.componentPath}}/{componentName}"/>
+                           sling:resourceType="{{components.resourceTypeBase}}/{componentName}"/>
 
                    </container>
                </container>
@@ -299,13 +314,13 @@ The `ui.content` filter typically uses `mode="merge"` for `{{jcr.contentRoot}}`,
    </jcr:root>
    ```
 
-   **Note:** The `sling:resourceType` uses the path relative to `/apps/`, so `{{jcr.componentPath}}` should be stripped of the leading `/apps/` prefix. For example, if `jcr.componentPath` is `/apps/mysite/components`, use `mysite/components/{componentName}`.
+   **Note:** Use `{{components.resourceTypeBase}}/{componentName}` for `sling:resourceType`. It is already expressed relative to `/apps/` and is safe to reuse across repos.
 
-3. **Include at least 2 component instances** — one full, one empty.
+4. **Include at least 2 component instances** — one full, one empty.
 
-4. **Resulting test page URL:**
+5. **Resulting test page URL:**
    ```
-   {{aem.authorUrl}}{{jcr.contentLangRoot}}/agent-test-{feature-name}.html
+   {{aem.authorUrl}}{{jcr.testPagesRoot}}/agent-test-{feature-name}.html
    ```
 
 ---
@@ -342,7 +357,7 @@ For **servlets, services, schedulers, listeners, filters**:
 
 #### Policy Note
 
-Components using `componentGroup="{{components.group}}"` are **automatically allowed** if the template policy allows that group. **No policy update is needed** for standard components.
+Components using `componentGroup="{{components.group}}"` often align with existing policies, but they are **not automatically allowed in every repo**. Inspect the editable template policy mappings and add/update policy entries only when the component is missing.
 
 ---
 
@@ -371,7 +386,7 @@ cd {{PROJECT_ROOT}} && mvn test -pl {{modules.core}}
 ```
 WHILE (issues exist) {
     1. Identify root cause from build/test output
-    2. Fix code/config using insert_edit_into_file
+    2. Fix code/config using the available file editing tool
     3. Rebuild
     4. Retest
     5. Check for new errors
@@ -409,8 +424,8 @@ What was implemented (1-2 sentences)
 
 ### 🌐 Test Content
 - **Approach Used:** A (file-based) / B (cURL) / C (documented)
-- **Test Page URL:** `{{aem.authorUrl}}{{jcr.contentLangRoot}}/agent-test-{feature-name}.html`
-- **Authoring URL:** `{{aem.authorUrl}}/editor.html{{jcr.contentLangRoot}}/agent-test-{feature-name}.html`
+- **Test Page URL:** `{{aem.authorUrl}}{{jcr.testPagesRoot}}/agent-test-{feature-name}.html`
+- **Authoring URL:** `{{aem.authorUrl}}/editor.html{{jcr.testPagesRoot}}/agent-test-{feature-name}.html`
 - **Test Instances:** 2 (full + empty)
 - **Cleanup:** Delete `agent-test-{feature-name}/` directory when done
 

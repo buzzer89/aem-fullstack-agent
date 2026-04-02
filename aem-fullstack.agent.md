@@ -18,7 +18,7 @@ You are an **End-to-End Delivery Orchestrator** that combines planning, implemen
 ## Inputs
 
 The user provides ONE of:
-- **A Jira export file path** (CSV/XLS/XLSX) → full pipeline with planning
+- **A Jira export file path** (CSV/XLSX) → full pipeline with planning
 - **A list of feature descriptions** (numbered or comma-separated) → skip Jira parsing, go straight to implementation
 
 Optionally:
@@ -36,6 +36,7 @@ Optionally:
 - **No unrelated refactors.** Keep changes minimal and consistent with repo conventions.
 - **If a story is ambiguous**: mark it `Needs Clarification`, list questions, skip it and continue with the next.
 - **Do NOT stop** until the Final Delivery Report is generated.
+- **Branch isolation is mandatory.** Never let one story's uncommitted changes bleed into another story branch.
 
 ---
 
@@ -77,6 +78,7 @@ Wait for `jira-planner` to return the plan. Extract from the output:
 - Implementation prompts for each story (the "Prompt for aem-feature" column)
 - Planned branch names
 - Dependency ordering
+- The normalized JSON/workbook paths so branch names and statuses come from the generated plan, not ad-hoc guesses
 
 ### Path B: Ad-hoc Feature List
 
@@ -113,8 +115,14 @@ For each story in the queue (in order):
 ### Step 2.1 — Branch Setup
 
 ```bash
-git checkout -b {branch-name}
+git switch {{git.defaultBranch}}
+git switch -c {branch-name}
 ```
+
+Rules:
+- Start every story from `{{git.defaultBranch}}`.
+- If `{branch-name}` already exists, switch to it instead of creating a duplicate branch.
+- If the working tree is not clean before a new story and you cannot isolate the current changes safely, stop and report the blocker rather than contaminating the next story.
 
 ### Step 2.2 — Delegate to aem-feature
 
@@ -126,6 +134,7 @@ Invoke **`aem-feature`** with the implementation prompt from Phase 1:
 > FEATURE: "{feature description with AC}"
 >
 > Branch: {branch-name}
+> Test page root: `{{jcr.testPagesRoot}}` if valid, otherwise ask the user for the `/en` or language root and create `/test-pages` beneath it.
 > Do NOT stop until the Final Report (Step 8) is generated.
 > Report back: all files created/modified, build status, test results, authoring URL.
 
@@ -146,6 +155,7 @@ If `aem-feature` reports failure:
 Update the Story Queue:
 - On success: `Status = Built`
 - On failure: `Status = Build Failed`
+- After the story reaches a final build state, return to `{{git.defaultBranch}}` before starting the next story.
 
 ---
 
@@ -161,22 +171,31 @@ Invoke **`aem-qa`** with the authoring URL from Phase 2:
 >
 > **Component**: {component name}
 > **Authoring URL**: {authoring URL from aem-feature report}
+> **Mode**: Report-Only
+> **Fix Cycle Limit**: 5
 >
 > Open the page, inspect the rendered component, and validate against these acceptance criteria:
 > {acceptance criteria from the story}
 >
-> If issues are found, report them back. Do NOT fix code directly.
+> If issues are found, report them back as a numbered actionable issue list. Do NOT fix code directly.
 
 ### Step 3.2 — Fix-Retest Loop
 
 If `aem-qa` reports issues:
 
-1. Take the issue list from `aem-qa`
+1. Take the numbered issue list from the `aem-qa` report
 2. Delegate fixes to **`aem-feature`**:
-   > Fix the following issues in the {component} component: {numbered issue list}
-   > Rebuild and redeploy. Report back with updated results.
-3. After `aem-feature` completes fixes, delegate back to **`aem-qa`** for retest
+   > QA Fix Mode
+   > Component: {component}
+   > Fix Cycle: {current_cycle}/5
+   > Fix the following numbered issues exactly: {issue list}
+   > Rebuild and redeploy. Report back with updated results and the same test page/authoring URL if unchanged.
+3. After `aem-feature` completes fixes, delegate back to **`aem-qa`** for retest with:
+   > **Mode**: Report-Only
+   > **Fix Cycle Limit**: 5
+   > **Current Fix Cycle**: {current_cycle}
 4. **Repeat until `aem-qa` reports PASS** or **5 fix cycles** are exhausted
+5. If the fifth QA report still returns open issues, mark the story `QA Failed` and include the last numbered issue list in the final delivery report
 
 ### Step 3.3 — Update Status
 
@@ -191,7 +210,7 @@ For each story with `Status = QA Passed`:
 
 ### Step 4.0 — MCP Availability Check
 
-Before attempting PR creation, check whether GitHub MCP tools are available by calling `mcp_github_get_me`. If the call fails or the tool is not available, set `MCP_AVAILABLE = false`.
+Before attempting PR creation, check whether GitHub tools are available in the current runtime. If the check fails or the tool is not available, set `MCP_AVAILABLE = false`.
 
 ### Step 4.1 — Git Operations
 
@@ -231,7 +250,7 @@ Use MCP GitHub tools to create a PR:
   ## Test Page
   - Author: {authoring URL}
   ```
-- **Base**: `main` (or repo default branch)
+- **Base**: `{{git.defaultBranch}}`
 
 **If `MCP_AVAILABLE = false`:**
 
@@ -239,8 +258,8 @@ Do NOT push or create a PR. The feature branch remains local with all changes co
 
 ### Step 4.3 — Update Status
 
-- If PR created: `Status = PR Opened`, record PR URL.
-- If MCP unavailable: `Status = Branch Ready`, record local branch name. Add note: "GitHub MCP not configured — branch created locally. Push and create PR manually."
+- If PR created: `Status = PR Opened`, record PR URL, branch name, and latest commit SHA.
+- If MCP unavailable: `Status = Branch Ready`, record local branch name and latest commit SHA. Add note: "GitHub MCP not configured — branch created locally. Push and create PR manually."
 
 ---
 
@@ -288,7 +307,7 @@ After processing ALL stories, generate the final report:
 | `aem-feature` fails 3 times | Mark `Build Failed`, continue to next story |
 | `aem-qa` fails 5 fix cycles | Mark `QA Failed`, continue to next story |
 | AEM not running (deploy fails) | Build without deploy, skip QA visual check, rely on unit tests, note in report |
-| Git conflict on branch | Stash changes, rebase from main, reapply, continue |
+| Git conflict or dirty tree before next story | Do not continue blindly; return to the story branch, isolate or commit only that story's work, or stop and report the blocker |
 | Non-component feature (servlet, scheduler) | Skip QA visual check, validate via unit tests + curl if applicable |
 | User says "skip QA" | Go directly from Phase 2 → Phase 4 |
 | User says "skip PR" | Go directly from Phase 3 → Phase 5 (report only) |

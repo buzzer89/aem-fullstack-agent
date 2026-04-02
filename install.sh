@@ -12,7 +12,7 @@
 #
 # What it does:
 #   1. Copies .agent/universal/ (setup.sh, AGENT.md, REPO_CONTEXT.md,
-#      QUICKSTART.md) into the target project
+#      QUICKSTART.md, jira_plan.py) into the target project
 #   2. Runs setup.sh to scan the project and generate project.yaml
 #   3. Installs AGENT.md and REPO_CONTEXT.md at .agent/ level
 # ============================================================================
@@ -55,7 +55,7 @@ TARGET_AGENT_DIR="$TARGET_PROJECT/.agent/universal"
 mkdir -p "$TARGET_AGENT_DIR"
 
 COPIED=0
-for f in setup.sh AGENT.md REPO_CONTEXT.md QUICKSTART.md install.sh; do
+for f in setup.sh AGENT.md REPO_CONTEXT.md QUICKSTART.md install.sh jira_plan.py; do
     if [ -f "$SCRIPT_DIR/$f" ]; then
         cp "$SCRIPT_DIR/$f" "$TARGET_AGENT_DIR/$f"
         echo "   ✅ Copied: .agent/universal/$f"
@@ -80,6 +80,7 @@ fi
 # Make setup.sh and install.sh executable
 chmod +x "$TARGET_AGENT_DIR/setup.sh" 2>/dev/null || true
 chmod +x "$TARGET_AGENT_DIR/install.sh" 2>/dev/null || true
+chmod +x "$TARGET_AGENT_DIR/jira_plan.py" 2>/dev/null || true
 
 # --- Copy VS Code agent files to .github/agents/ ---
 TARGET_AGENTS_DIR="$TARGET_PROJECT/.github/agents"

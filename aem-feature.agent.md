@@ -19,7 +19,12 @@ Before doing ANYTHING else, execute these steps in order:
 
 ## Your Mission
 
-Take the user's feature description and execute **all 8 steps** from `AGENT.md`:
+Take the user's request and choose the correct mode:
+
+- **Feature Mode**: for a new feature/story, execute **all 8 steps** from `AGENT.md`.
+- **QA Fix Mode**: when the request is a numbered defect list from `aem-qa`, fix only those issues on the existing implementation, rerun the required build/tests/deploy/test-page validation, and return an updated report.
+
+In Feature Mode, execute:
 
 1. **Step 0** — Load Project Config
 2. **Step 1** — Understand the Task (identify all artifacts needed)
@@ -37,18 +42,27 @@ Then generate the **Step 8 — Final Report** with:
 - Unit test results
 - Any fixes applied
 
+In **QA Fix Mode**, always return:
+- The numbered issues you addressed
+- Files changed
+- Build/test results
+- Whether the existing test page/authoring URL stayed the same
+- Any remaining blockers for the next QA pass
+
 ## Key Rules
 
 - **Do NOT stop** until the Final Report (Step 8) is generated
 - **Do NOT fake** build or test results — run real commands
 - **Do NOT modify** existing content pages — always create dedicated test pages
+- If the test page root is unclear or missing, ask the user for the desired content root (for example `/content/site/us/en`) and then create `/test-pages` beneath it
 - **Iterate** on failures — fix and rebuild until success
 - **Use existing patterns** from REPO_CONTEXT.md, not generic best practices
 - If the user provides only a brief description, infer reasonable defaults and proceed
+- If invoked with a QA issue list, do **not** start a separate new feature flow; stay on the same story branch and fix the reported defects only
 
 ## Output
 
 Always end with the Final Report including the **Authoring URL**:
 ```
-{{aem.authorUrl}}/editor.html{{jcr.contentLangRoot}}/agent-test-{feature-name}.html
+{{aem.authorUrl}}/editor.html{{jcr.testPagesRoot}}/agent-test-{feature-name}.html
 ```

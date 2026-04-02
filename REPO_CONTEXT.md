@@ -19,9 +19,12 @@ Read from `project.yaml`:
 | AEM Type | `aem.type` (`cloud` / `lts` / `ams` / `on-prem`) |
 | Java Version | `aem.javaVersion` |
 | Component Group | `components.group` |
+| Component Resource Type Base | `components.resourceTypeBase` |
 | Content Root | `jcr.contentRoot` |
+| Test Pages Root | `jcr.testPagesRoot` |
 | Apps Root | `jcr.appsRoot` |
 | Conf Root | `jcr.confRoot` |
+| Default PR Base Branch | `git.defaultBranch` |
 
 ---
 
@@ -115,7 +118,8 @@ Read from `project.yaml`:
 ```
 
 **Notes:**
-- `componentGroup` MUST match `{{components.group}}` from project.yaml — this auto-allows it in the template policy
+- `componentGroup` MUST match `{{components.group}}` from project.yaml so it lines up with repo policies and authoring groups
+- Do not assume policy allow-lists update automatically. Inspect editable template policies before deciding whether a policy change is needed.
 - For proxy components extending Core Components, add: `sling:resourceSuperType="core/wcm/components/image/v3/image"`
 
 ---
@@ -232,7 +236,7 @@ Read from `project.yaml`:
 <!-- Hidden Field -->
 <resourceType jcr:primaryType="nt:unstructured"
     sling:resourceType="granite/ui/components/coral/foundation/form/hidden"
-    name="./sling:resourceType" value="{{components.clientlibPrefix}}/components/mycomponent"/>
+    name="./sling:resourceType" value="{{components.resourceTypeBase}}/mycomponent"/>
 
 <!-- Multifield -->
 <items jcr:primaryType="nt:unstructured"
@@ -350,7 +354,7 @@ import org.apache.sling.models.annotations.Exporter;
 @Model(
     adaptables = Resource.class,
     adapters = MyComponentModel.class,
-    resourceType = "{{components.clientlibPrefix}}/components/mycomponent",
+    resourceType = "{{components.resourceTypeBase}}/mycomponent",
     defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
 )
 @Exporter(name = "jackson", extensions = "json")
@@ -541,7 +545,7 @@ class MyComponentModelTest {
     @Test
     void testGetTitle() {
         Resource resource = context.create().resource(page, "mycomp",
-            "sling:resourceType", "{{components.clientlibPrefix}}/components/mycomponent",
+            "sling:resourceType", "{{components.resourceTypeBase}}/mycomponent",
             "title", "Test Title");
         MyComponentModel model = resource.adaptTo(MyComponentModel.class);
         assertNotNull(model);
@@ -551,7 +555,7 @@ class MyComponentModelTest {
     @Test
     void testNullValues() {
         Resource emptyResource = context.create().resource(page, "empty",
-            "sling:resourceType", "{{components.clientlibPrefix}}/components/mycomponent");
+            "sling:resourceType", "{{components.resourceTypeBase}}/mycomponent");
         MyComponentModel emptyModel = emptyResource.adaptTo(MyComponentModel.class);
         assertNotNull(emptyModel);
         assertNull(emptyModel.getTitle());
@@ -661,10 +665,19 @@ mycomponent.js
 
 **⚠️ NEVER modify existing content pages. Always create a dedicated test page.**
 
-Create a new directory + `.content.xml` under:
+Use `{{jcr.testPagesRoot}}` as the dedicated parent for all agent-created pages.
+
+If the path does not exist yet, create:
 ```
-{{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/agent-test-{feature-name}/
+{{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/
 ```
+
+Then create the feature test page under:
+```
+{{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/agent-test-{feature-name}/
+```
+
+If `{{jcr.testPagesRoot}}` is missing or clearly wrong and you cannot infer a safe authoring root from the repo, ask the user for the desired `/en` or language-root path and create `/test-pages` beneath it before proceeding.
 
 ### Full test page template:
 ```xml
@@ -694,14 +707,14 @@ Create a new directory + `.content.xml` under:
                     <!-- Instance 1: All fields populated (happy path) -->
                     <mycomponent_full
                         jcr:primaryType="nt:unstructured"
-                        sling:resourceType="{{components.clientlibPrefix}}/components/mycomponent"
+                        sling:resourceType="{{components.resourceTypeBase}}/mycomponent"
                         title="Sample Title"
                         description="Sample description text"/>
 
                     <!-- Instance 2: Empty / minimal (edge case) -->
                     <mycomponent_empty
                         jcr:primaryType="nt:unstructured"
-                        sling:resourceType="{{components.clientlibPrefix}}/components/mycomponent"/>
+                        sling:resourceType="{{components.resourceTypeBase}}/mycomponent"/>
 
                 </container>
             </container>
@@ -714,7 +727,7 @@ Create a new directory + `.content.xml` under:
 ```xml
 <cardlist_full
     jcr:primaryType="nt:unstructured"
-    sling:resourceType="{{components.clientlibPrefix}}/components/cardlist"
+    sling:resourceType="{{components.resourceTypeBase}}/cardlist"
     layout="3-column">
     <cards jcr:primaryType="nt:unstructured">
         <item0 jcr:primaryType="nt:unstructured" title="Card One" linkURL="{{jcr.contentLangRoot}}"/>
@@ -725,8 +738,8 @@ Create a new directory + `.content.xml` under:
 
 ### Test page URLs:
 ```
-{{aem.authorUrl}}{{jcr.contentLangRoot}}/agent-test-{feature-name}.html
-{{aem.authorUrl}}/editor.html{{jcr.contentLangRoot}}/agent-test-{feature-name}.html
+{{aem.authorUrl}}{{jcr.testPagesRoot}}/agent-test-{feature-name}.html
+{{aem.authorUrl}}/editor.html{{jcr.testPagesRoot}}/agent-test-{feature-name}.html
 ```
 
 ---
@@ -832,3 +845,7 @@ Typically includes `{{jcr.componentPath}}` and `{{jcr.clientlibPath}}` — new c
 Check `build.contentFilterMode` in project.yaml:
 - `merge` — New child nodes (pages, config) auto-included. No filter changes needed.
 - `replace` — Only explicitly listed roots are included. You MAY need to add filter entries for new content.
+
+### Editable Template Policies:
+- Inspect `{{jcr.confRoot}}/settings/wcm/templates/` and `{{jcr.confRoot}}/settings/wcm/policies/` before adding a component to authorable pages.
+- Reuse existing policy/container structures when possible instead of inventing new templates or policy trees.

@@ -16,6 +16,7 @@ The `.agent/universal/` folder contains everything a team needs:
 ├── setup.sh                  # Bootstrap script — scans your project, generates project.yaml
 ├── AGENT.md                  # Generic 8-step pipeline (same for ALL teams)
 ├── REPO_CONTEXT.md           # Universal code patterns with {{placeholders}}
+├── jira_plan.py              # Generic Jira CSV/XLSX normalizer + workbook generator
 ├── aem-feature.agent.md      # VS Code agent: build AEM features end-to-end
 ├── aem-qa.agent.md           # VS Code agent: visual QA validation of components
 ├── aem-fullstack.agent.md    # VS Code agent: Plan → Build → QA → PR in one pipeline
@@ -99,7 +100,7 @@ Hero Banner
 ```
 or
 ```
-http://localhost:4502/editor.html/content/mysite/us/en/agent-test-hero-banner.html
+http://localhost:4502/editor.html/content/mysite/us/en/test-pages/agent-test-hero-banner.html
 ```
 
 The agent opens the page, inspects component rendering, reports defects, and drives fix-retest cycles with `aem-feature`.
@@ -107,7 +108,7 @@ The agent opens the page, inspects component rendering, reports defects, and dri
 ### Agent 3: AEM Full-Stack (Plan → Build → QA → PR in one go)
 
 1. Agent picker → select **"aem-fullstack"**
-2. Provide EITHER a Jira export file OR a list of features:
+2. Provide EITHER a Jira export file (`.csv` or `.xlsx`) OR a list of features:
 
 ```
 /Users/me/Downloads/sprint-14-stories.xlsx
@@ -131,8 +132,19 @@ The agent orchestrates the entire pipeline: **jira-planner** (plan) → **aem-fe
 Use this when you only want the planning/orchestration part without QA visual testing.
 
 **Prerequisites for Jira Planner:**
-- Python 3 with `openpyxl` (`pip install openpyxl`)
+- Python 3
+- `openpyxl` only when the input is `.xlsx` (`pip install openpyxl`)
 - GitHub MCP server configured (for PR creation)
+
+**Optional pre-flight for Jira intake:**
+```bash
+python3 .agent/jira_plan.py /path/to/sprint-stories.xlsx
+```
+This creates:
+- `{original}_with_dev_plan.xlsx`
+- `{original}_normalized.json`
+
+If your Jira export is an older `.xls`, export it again as `.xlsx` or `.csv` first.
 
 ### Alternative: Classic Prompt (without agent picker)
 
@@ -291,11 +303,13 @@ your-aem-project/
 │   ├── AGENT.md            ← Installed (generic pipeline)
 │   ├── REPO_CONTEXT.md     ← Installed (generic patterns)
 │   ├── QUICKSTART.md       ← Installed (this file)
+│   ├── jira_plan.py        ← Installed Jira intake helper
 │   └── universal/          ← Source files (distribute to other teams)
 │       ├── setup.sh
 │       ├── AGENT.md
 │       ├── REPO_CONTEXT.md
 │       ├── QUICKSTART.md
+│       ├── jira_plan.py
 │       └── aem-feature.agent.md
 ├── .github/
 │   └── agents/

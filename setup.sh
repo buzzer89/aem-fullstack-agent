@@ -34,6 +34,7 @@ AGENT_DIR="$PROJECT_ROOT/.agent"
 OUTPUT_FILE="$AGENT_DIR/project.yaml"
 POM_FILE="$PROJECT_ROOT/pom.xml"
 WARNINGS=""
+PROJECT_YAML_BACKED_UP="no"
 
 echo "🔍 AEM Feature Agent — Project Scanner"
 echo "   Project root: $PROJECT_ROOT"
@@ -46,6 +47,11 @@ if [ ! -f "$POM_FILE" ]; then
 fi
 
 mkdir -p "$AGENT_DIR"
+
+if [ -f "$OUTPUT_FILE" ]; then
+    cp "$OUTPUT_FILE" "${OUTPUT_FILE}.bak" 2>/dev/null || true
+    PROJECT_YAML_BACKED_UP="yes"
+fi
 
 # =============================================================================
 # Helper: extract XML element value (macOS + Linux safe — no grep -P)
@@ -662,6 +668,20 @@ if [ -z "$CONTENT_LANG_ROOT" ]; then
 fi
 echo "   Lang root:  $CONTENT_LANG_ROOT"
 
+TEST_PAGES_ROOT=""
+if [ -d "$PROJECT_ROOT/$MODULE_UI_CONTENT/src/main/content/jcr_root${CONTENT_LANG_ROOT}/test-pages" ]; then
+    TEST_PAGES_ROOT="${CONTENT_LANG_ROOT}/test-pages"
+else
+    EXISTING_TEST_PAGES_DIR=$(find "$CONTENT_FS_ROOT" -type d -path "*/test-pages" 2>/dev/null | head -1 || echo "")
+    if [ -n "$EXISTING_TEST_PAGES_DIR" ]; then
+        TEST_PAGES_ROOT=$(echo "$EXISTING_TEST_PAGES_DIR" | sed "s|.*jcr_root||")
+    fi
+fi
+if [ -z "$TEST_PAGES_ROOT" ]; then
+    TEST_PAGES_ROOT="${CONTENT_LANG_ROOT}/test-pages"
+fi
+echo "   Test root:  $TEST_PAGES_ROOT"
+
 # =============================================================================
 # 9. Existing components inventory
 # =============================================================================
@@ -735,6 +755,24 @@ if [ -d "$CLIENTLIB_FS_ROOT" ]; then
         | tr ',' '\n' | xargs | tr ' ' ',' || echo "")
 fi
 
+DEFAULT_BRANCH=""
+if git -C "$PROJECT_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    DEFAULT_BRANCH=$(git -C "$PROJECT_ROOT" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || echo "")
+    if [ -z "$DEFAULT_BRANCH" ]; then
+        for candidate in main master develop development; do
+            if git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/heads/$candidate" \
+                || git -C "$PROJECT_ROOT" show-ref --verify --quiet "refs/remotes/origin/$candidate"; then
+                DEFAULT_BRANCH="$candidate"
+                break
+            fi
+        done
+    fi
+    if [ -z "$DEFAULT_BRANCH" ]; then
+        DEFAULT_BRANCH=$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    fi
+fi
+[ -z "$DEFAULT_BRANCH" ] && DEFAULT_BRANCH="main"
+
 # =============================================================================
 # GENERATE project.yaml
 # =============================================================================
@@ -789,9 +827,11 @@ jcr:
   componentPath: "${COMPONENT_PATH}"
   clientlibPath: "${CLIENTLIB_PATH}"
   contentLangRoot: "${CONTENT_LANG_ROOT}"
+  testPagesRoot: "${TEST_PAGES_ROOT}"
 
 components:
   group: "${COMPONENT_GROUP}"
+  resourceTypeBase: "${APP_NAME}/components"
   pageResourceType: "${PAGE_RESOURCE_TYPE}"
   containerResourceType: "${CONTAINER_RESOURCE_TYPE}"
   pageTemplate: "${PAGE_TEMPLATE}"
@@ -807,6 +847,9 @@ testing:
   framework: "${TEST_FRAMEWORK}"
   mockingFramework: "${MOCKING_FRAMEWORK}"
   aemMocksVersion: "${AEM_MOCKS_VERSION}"
+
+git:
+  defaultBranch: "${DEFAULT_BRANCH}"
 
 existingComponents:
 ${COMPONENTS_LIST}
@@ -856,17 +899,17 @@ if [ -f "$AGENT_DIR/AGENT.md" ] && [ ! -f "$AGENT_DIR/AGENT.md.bak" ]; then
     cp "$AGENT_DIR/AGENT.md" "$AGENT_DIR/AGENT.md.bak" 2>/dev/null || true
     cp "$AGENT_DIR/REPO_CONTEXT.md" "$AGENT_DIR/REPO_CONTEXT.md.bak" 2>/dev/null || true
 fi
-if [ -f "$OUTPUT_FILE" ]; then
-    cp "$OUTPUT_FILE" "${OUTPUT_FILE}.bak" 2>/dev/null || true
+if [ "$PROJECT_YAML_BACKED_UP" = "yes" ]; then
     echo "📋 Backed up existing project.yaml → project.yaml.bak"
 fi
 
-for f in AGENT.md REPO_CONTEXT.md QUICKSTART.md; do
+for f in AGENT.md REPO_CONTEXT.md QUICKSTART.md jira_plan.py; do
     if [ -f "$UNIVERSAL_DIR/$f" ]; then
         cp "$UNIVERSAL_DIR/$f" "$AGENT_DIR/$f"
         echo "   Installed: $f"
     fi
 done
+chmod +x "$AGENT_DIR/jira_plan.py" 2>/dev/null || true
 
 # =============================================================================
 # Install all agent modes into .github/agents/
@@ -891,10 +934,12 @@ fi
 
 # Check if .agent or .github are gitignored
 if [ -f "$PROJECT_ROOT/.gitignore" ]; then
-    if grep -q '\.agent' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+    if grep -Eq '^[[:space:]]*\.agent/?[[:space:]]*$' "$PROJECT_ROOT/.gitignore" 2>/dev/null \
+        && ! grep -Eq '^[[:space:]]*!\.agent/' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
         echo "⚠️  .agent/ appears to be in .gitignore — remove the entry so the agents are committed for your team."
     fi
-    if grep -q '\.github' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+    if grep -Eq '^[[:space:]]*\.github/?[[:space:]]*$' "$PROJECT_ROOT/.gitignore" 2>/dev/null \
+        && ! grep -Eq '^[[:space:]]*!\.github/' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
         echo "⚠️  .github/ appears to be in .gitignore — remove the entry so VS Code discovers the agents."
     fi
 fi

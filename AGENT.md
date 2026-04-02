@@ -177,31 +177,42 @@ Use the available file editing tool for all file creation/modification. **Do not
 
 **You MUST attempt a real build.**
 
+#### Pre-Build Checklist
+
+Before running any Maven command:
+1. **Ensure ALL file creation/editing is complete.** Do NOT start a build while still writing files.
+2. **Run `sync` to flush file system buffers** (prevents race conditions with FileVault scanning):
+   ```
+   cd {{PROJECT_ROOT}} && sync
+   ```
+
 #### Build Commands (resolve from project.yaml):
+
+**IMPORTANT:** Always include `-T1` to force single-threaded Maven builds. This prevents `ConcurrentModificationException` errors caused by parallel module builds racing on shared plugin state (especially the FileVault content-package plugin). The `-T1` flag is mandatory for agent-driven builds even if the project normally builds with parallel threads.
 
 1. **Core module only** (fast, for Java changes):
    ```
-   cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.core}}
+   cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.core}}
    ```
 
 2. **Full build** (all modules):
    ```
-   cd {{PROJECT_ROOT}} && mvn clean install
+   cd {{PROJECT_ROOT}} && mvn clean install -T1
    ```
 
 3. **Build + Deploy to local AEM** (if AEM is running):
    ```
-   cd {{PROJECT_ROOT}} && mvn clean install -P{{build.deployProfile}}
+   cd {{PROJECT_ROOT}} && mvn clean install -T1 -P{{build.deployProfile}}
    ```
 
 4. **Deploy single module**:
    ```
-   cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.uiApps}} -P{{build.deployProfile}}
+   cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.uiApps}} -P{{build.deployProfile}}
    ```
 
 5. **Deploy bundle only**:
    ```
-   cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.core}} -P{{build.deployBundleProfile}}
+   cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.core}} -P{{build.deployBundleProfile}}
    ```
 
 Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk.
@@ -214,6 +225,7 @@ Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk
 
 #### On Build Failure:
 - Read the error output carefully
+- **If `ConcurrentModificationException`**: This is a transient race condition. Wait 2 seconds, then retry the exact same build command (with `-T1`). Usually passes on retry.
 - Fix the code
 - Rebuild
 - Repeat until `BUILD SUCCESS`
@@ -418,7 +430,7 @@ What was implemented (1-2 sentences)
 | `path/to/file` | Created / Modified | What changed |
 
 ### ⚙️ Deployment
-- Command: `mvn clean install -P{{build.deployProfile}}`
+- Command: `mvn clean install -T1 -P{{build.deployProfile}}`
 - Build Status: ✅ SUCCESS / ❌ FAILED (reason)
 - Deploy Status: ✅ DEPLOYED / ⚠️ NOT DEPLOYED (AEM not running)
 

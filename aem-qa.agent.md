@@ -34,9 +34,38 @@ The caller may choose one of these modes:
 
 ## Workflow
 
-### 1. Open & Inspect
+### 0. Ensure Test Page Exists
 
-- If the expected test page does not exist yet, delegate to `aem-feature` to create the required `/test-pages` root (if needed) and the feature test page before continuing QA.
+Before inspecting, verify the test page is available:
+
+1. **Check file system**: Look for the test page directory at:
+   ```
+   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/agent-test-{component-name-kebab}/.content.xml
+   ```
+2. **Check AEM instance** (if running): Try fetching the page via cURL:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" -u {{aem.credentials}} "{{aem.authorUrl}}{{jcr.contentLangRoot}}/agent-test-{component-name-kebab}.html"
+   ```
+   - `200` → page exists, proceed to inspection
+   - `404` or connection error → page does not exist
+
+3. **If the test page does NOT exist**, delegate to `aem-feature` to create it:
+
+   > Create a test page for the **{component-name}** component.
+   >
+   > Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
+   > Execute ONLY Step 5 (Create Test Page) from the AGENT.md pipeline:
+   >
+   > - Component: {component-name}
+   > - Resource type: {{jcr.componentPath}}/{component-name-kebab}
+   > - Test page path: {{jcr.contentLangRoot}}/agent-test-{component-name-kebab}
+   > - Include TWO instances: one with all fields populated (happy path) and one empty (edge case)
+   > - Build and deploy so the page is available on the author instance
+   > - Report back with the authoring URL
+
+4. **Verify creation**: After `aem-feature` reports success, re-check the page (cURL or file system). If still missing, report it as a blocker and stop.
+
+### 1. Open & Inspect
 - Prefer any available browser/page-inspection capability to open the authoring URL and inspect the rendered component visually.
 - If browser inspection is unavailable, fall back to command-line inspection:
   - Fetch the author or page HTML via `curl -u {{aem.credentials}} "{url}"`.
@@ -91,7 +120,7 @@ If the cycle budget is exhausted and issues remain unresolved, generate a final 
 ## Constraints
 
 - DO NOT edit any source code files directly — all fixes go through `aem-feature`
-- DO NOT modify test pages or content — only read and inspect
+- DO NOT modify existing test pages or content directly — only read and inspect. Test page *creation* is delegated to `aem-feature`
 - DO NOT skip the component spec read — you need it to know what "correct" looks like
 - Prefer the authoring (`editor.html`) view, but if browser tooling is unavailable you may inspect the rendered page HTML directly and must state that the result is a partial/manual visual validation
 - If the test-page root is ambiguous, ask the user for the language/content root instead of guessing

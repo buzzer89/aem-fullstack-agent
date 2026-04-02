@@ -856,6 +856,10 @@ if [ -f "$AGENT_DIR/AGENT.md" ] && [ ! -f "$AGENT_DIR/AGENT.md.bak" ]; then
     cp "$AGENT_DIR/AGENT.md" "$AGENT_DIR/AGENT.md.bak" 2>/dev/null || true
     cp "$AGENT_DIR/REPO_CONTEXT.md" "$AGENT_DIR/REPO_CONTEXT.md.bak" 2>/dev/null || true
 fi
+if [ -f "$OUTPUT_FILE" ]; then
+    cp "$OUTPUT_FILE" "${OUTPUT_FILE}.bak" 2>/dev/null || true
+    echo "📋 Backed up existing project.yaml → project.yaml.bak"
+fi
 
 for f in AGENT.md REPO_CONTEXT.md QUICKSTART.md; do
     if [ -f "$UNIVERSAL_DIR/$f" ]; then
@@ -865,14 +869,16 @@ for f in AGENT.md REPO_CONTEXT.md QUICKSTART.md; do
 done
 
 # =============================================================================
-# Install custom agent mode into .github/agents/
+# Install all agent modes into .github/agents/
 # =============================================================================
 GITHUB_AGENTS_DIR="$PROJECT_ROOT/.github/agents"
-if [ -f "$UNIVERSAL_DIR/aem-feature.agent.md" ]; then
-    mkdir -p "$GITHUB_AGENTS_DIR"
-    cp "$UNIVERSAL_DIR/aem-feature.agent.md" "$GITHUB_AGENTS_DIR/aem-feature.agent.md"
-    echo "   Installed: .github/agents/aem-feature.agent.md (Custom Agent Mode)"
-fi
+mkdir -p "$GITHUB_AGENTS_DIR"
+for agent_file in aem-feature.agent.md aem-qa.agent.md aem-fullstack.agent.md jira-planner.agent.md; do
+    if [ -f "$UNIVERSAL_DIR/$agent_file" ]; then
+        cp "$UNIVERSAL_DIR/$agent_file" "$GITHUB_AGENTS_DIR/$agent_file"
+        echo "   Installed: .github/agents/$agent_file"
+    fi
+done
 
 echo ""
 echo "🎉 Setup complete!"
@@ -882,11 +888,28 @@ if [ -n "$WARNINGS" ]; then
     echo -e "$WARNINGS"
     echo ""
 fi
+
+# Check if .agent or .github are gitignored
+if [ -f "$PROJECT_ROOT/.gitignore" ]; then
+    if grep -q '\.agent' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+        echo "⚠️  .agent/ appears to be in .gitignore — remove the entry so the agents are committed for your team."
+    fi
+    if grep -q '\.github' "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+        echo "⚠️  .github/ appears to be in .gitignore — remove the entry so VS Code discovers the agents."
+    fi
+fi
+echo "Installed agents:"
+echo "  🔨 aem-feature   — Build AEM components/features end-to-end"
+echo "  🧪 aem-qa        — Visual QA validation of AEM components"
+echo "  🚀 aem-fullstack — Plan → Build → QA → PR in one pipeline"
+echo "  📋 jira-planner  — Parse Jira exports → dev plans → orchestrate → PRs"
+echo ""
 echo "Next steps:"
 echo "  1. Review .agent/project.yaml and adjust any values"
-echo "  2. Open VS Code Copilot Chat, select the 'AEM Feature' agent from the agent picker, and type:"
-echo '     Create a Hero Banner component with background image, title, and CTA button'
-echo "  3. Or paste the classic prompt:"
-echo '     @workspace Read .agent/AGENT.md, .agent/REPO_CONTEXT.md, and .agent/project.yaml fully.'
-echo '     Then execute all 8 steps for: FEATURE: "Your feature here"'
+echo "  2. Open VS Code Copilot Chat → click agent picker → select an agent:"
+echo ""
+echo "     aem-feature:    Describe a feature to build"
+echo "     aem-qa:         Provide a component name or authoring URL to test"
+echo "     aem-fullstack:  Provide a Jira export or feature list for end-to-end delivery"
+echo "     jira-planner:   Provide a Jira export file path"
 echo ""

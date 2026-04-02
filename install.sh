@@ -63,6 +63,15 @@ for f in setup.sh AGENT.md REPO_CONTEXT.md QUICKSTART.md install.sh; do
     fi
 done
 
+# Copy agent definition files to universal/ (needed for self-propagation and setup.sh)
+for agent_file in aem-feature.agent.md aem-qa.agent.md aem-fullstack.agent.md jira-planner.agent.md; do
+    if [ -f "$SCRIPT_DIR/$agent_file" ]; then
+        cp "$SCRIPT_DIR/$agent_file" "$TARGET_AGENT_DIR/$agent_file"
+        echo "   ✅ Copied: .agent/universal/$agent_file"
+        COPIED=$((COPIED + 1))
+    fi
+done
+
 if [ "$COPIED" -eq 0 ]; then
     echo "❌ No agent files found in $SCRIPT_DIR"
     exit 1

@@ -665,6 +665,16 @@ mycomponent.js
 
 **⚠️ NEVER modify existing content pages. Always create a dedicated test page.**
 
+### 13a. Learn from existing pages first
+
+Before creating a test page, ask the user for their site root path (e.g. `/content/mysite/us/en`), then read 2–3 existing `.content.xml` pages under:
+```
+{{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/
+```
+Study the page template, container nesting pattern, and component authoring conventions. Mirror what you find in your test page rather than only relying on the template below.
+
+### 13b. Test page location
+
 Use `{{jcr.testPagesRoot}}` as the dedicated parent for all agent-created pages.
 
 If the path does not exist yet, create:

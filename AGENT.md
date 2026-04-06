@@ -236,6 +236,39 @@ Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk
 
 **⚠️ CRITICAL: NEVER modify existing content pages. Always create a DEDICATED test page.**
 
+#### Step 5a — Learn from existing content pages
+
+Before creating the test page, study how the project actually authors content:
+
+1. **Ask the user** (one concise question):
+   > What is the root path of your site? (e.g. `/content/mysite/us/en`)
+
+   Use the answer as `{siteRoot}`.
+
+2. **Locate the content on disk** at:
+   ```
+   {{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/
+   ```
+
+3. **Inspect 2–3 existing pages** under that directory:
+   - Pick child directories that contain a `.content.xml` (these are content pages).
+   - Read each `.content.xml` and note:
+     - **Page template** (`cq:template`) and **page resource type** (`sling:resourceType` on `jcr:content`).
+     - **Container nesting pattern** — the exact node hierarchy from `jcr:content` down to where components are placed (e.g. `jcr:content/root/container/container` vs `jcr:content/root/responsivegrid`).
+     - **Component instances** — which `sling:resourceType` values are used, how properties are named, whether multifield child nodes are present.
+     - **Responsive grid markers** — presence of `layout="responsiveGrid"`, `cq:responsive` nodes, column offsets.
+
+4. **Build a mental model** of the project's authoring conventions:
+   - Correct container nesting depth to place components.
+   - Actual template / resource type values (may differ from `project.yaml` defaults).
+   - Property naming style (camelCase vs kebab-case, abbreviated vs full names).
+
+5. **Apply what you learned** — when creating the test page below, mirror the container structure and page template you observed rather than only relying on `project.yaml` placeholders. If the observed values conflict with `project.yaml`, prefer what is actually in the repo.
+
+> **Skip condition:** If the user has already provided a reference page path, or if this is a QA-fix rerun where the test page already exists, skip Step 5a.
+
+---
+
 The agent supports **3 approaches** depending on what is being tested.
 
 #### Decision Logic

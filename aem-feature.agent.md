@@ -33,7 +33,7 @@ In Feature Mode, execute:
 3. **Step 2** — Plan Before Coding (output implementation plan)
 4. **Step 3** — Implement (create all code files using project patterns)
 5. **Step 4** — Build & Deploy Locally (run Maven build, fix errors)
-6. **Step 5** — Create Test Page / Content (file-based + cURL if AEM running)
+6. **Step 5** — Create Test Page / Content (inspect existing pages first, then file-based + cURL if AEM running)
 7. **Step 6** — Test (run unit tests, validate)
 8. **Step 7** — Auto Fix Loop (iterate until build + tests pass)
 
@@ -57,7 +57,7 @@ In **QA Fix Mode**, always return:
 - **Do NOT stop** until the Final Report (Step 8) is generated
 - **Do NOT fake** build or test results — run real commands
 - **Do NOT modify** existing content pages — always create dedicated test pages
-- If the test page root is unclear or missing, ask the user for the desired content root (for example `/content/site/us/en`) and then create `/test-pages` beneath it
+- If the test page root is unclear or missing, ask the user for the site root path (e.g. `/content/site/us/en`), inspect 2–3 existing pages under it to learn the authoring structure, then create `/test-pages` beneath it
 - **Iterate** on failures — fix and rebuild until success
 - **Use existing patterns** from REPO_CONTEXT.md, not generic best practices
 - If the user provides only a brief description, infer reasonable defaults and proceed

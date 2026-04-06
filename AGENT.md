@@ -388,7 +388,7 @@ Components using `componentGroup="{{components.group}}"` often align with existi
 
 Run unit tests:
 ```
-cd {{PROJECT_ROOT}} && mvn test -pl {{modules.core}}
+cd {{PROJECT_ROOT}} && mvn test -T1 -pl {{modules.core}}
 ```
 
 ---

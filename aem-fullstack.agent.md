@@ -126,17 +126,23 @@ Rules:
 
 ### Step 2.2 — Delegate to aem-feature
 
-Invoke **`aem-feature`** with the implementation prompt from Phase 1:
+**If the story came from Jira planning (Phase 1 Path A):**
+
+Use the **"Prompt for aem-feature"** column from the Dev Plan worksheet verbatim — it already contains the `FEATURE:` keyword, Jira Key, description, acceptance criteria, branch name, test page root reference, and `-T1` Maven flag.
+
+**If the story came from ad-hoc feature list (Phase 1 Path B):**
+
+Invoke **`aem-feature`** with this template:
 
 > Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
-> Then execute all 8 steps for this feature:
+> Then execute all 8 steps for this feature. Do NOT stop until the Final Report (Step 8) is generated.
 >
 > FEATURE: "{feature description with AC}"
 >
-> Branch: {branch-name}
-> Test page root: `{{jcr.testPagesRoot}}` if valid, otherwise ask the user for the `/en` or language root and create `/test-pages` beneath it.
-> Do NOT stop until the Final Report (Step 8) is generated.
-> Report back: all files created/modified, build status, test results, authoring URL.
+> Branch: `{branch-name}` (already checked out — do NOT create a new branch)
+> Test page root: `{{jcr.testPagesRoot}}` (resolve from project.yaml; if missing or unclear, ask the user for the language/content root and create `/test-pages` beneath it)
+>
+> Required output: all files created/modified, build status (use `-T1` for all Maven commands), test results, authoring URL.
 
 ### Step 2.3 — Validate aem-feature Output
 
@@ -171,9 +177,11 @@ Invoke **`aem-qa`** with the authoring URL from Phase 2:
 >
 > **Component**: {component name}
 > **Authoring URL**: {authoring URL from aem-feature report}
+> **Test Page Path**: {{jcr.testPagesRoot}}/agent-test-{component-name-kebab}
 > **Mode**: Report-Only
 > **Fix Cycle Limit**: 5
 >
+> Read `.agent/project.yaml` for project values.
 > Open the page, inspect the rendered component, and validate against these acceptance criteria:
 > {acceptance criteria from the story}
 >
@@ -186,10 +194,13 @@ If `aem-qa` reports issues:
 1. Take the numbered issue list from the `aem-qa` report
 2. Delegate fixes to **`aem-feature`**:
    > QA Fix Mode
+   >
+   > Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
+   >
    > Component: {component}
    > Fix Cycle: {current_cycle}/5
    > Fix the following numbered issues exactly: {issue list}
-   > Rebuild and redeploy. Report back with updated results and the same test page/authoring URL if unchanged.
+   > Rebuild and redeploy (use `-T1` for all Maven commands). Report back with updated results and the authoring URL.
 3. After `aem-feature` completes fixes, delegate back to **`aem-qa`** for retest with:
    > **Mode**: Report-Only
    > **Fix Cycle Limit**: 5

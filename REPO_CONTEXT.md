@@ -746,28 +746,33 @@ If `{{jcr.testPagesRoot}}` is missing or clearly wrong and you cannot infer a sa
 
 ## 14. Build & Deploy Commands
 
+**IMPORTANT:** Always include `-T1` (single-threaded) in all Maven build commands to prevent `ConcurrentModificationException` errors caused by parallel module builds racing on shared plugin state (especially the FileVault content-package plugin). Also run `sync` before building to flush file-system buffers.
+
 ```bash
+# Flush file-system buffers before building
+cd {{PROJECT_ROOT}} && sync
+
 # Core only (fast — Java changes)
-cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.core}}
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.core}}
 
 # Full build (all modules)
-cd {{PROJECT_ROOT}} && mvn clean install
+cd {{PROJECT_ROOT}} && mvn clean install -T1
 
 # Build + deploy to local AEM author
-cd {{PROJECT_ROOT}} && mvn clean install -P{{build.deployProfile}}
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -P{{build.deployProfile}}
 
 # Build + deploy to local AEM publish
-cd {{PROJECT_ROOT}} && mvn clean install -P{{build.deployProfile}}Publish
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -P{{build.deployProfile}}Publish
 
 # Deploy single module
-cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.uiApps}} -P{{build.deployProfile}}
-cd {{PROJECT_ROOT}} && mvn clean install -pl {{modules.core}} -P{{build.deployBundleProfile}}
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.uiApps}} -P{{build.deployProfile}}
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -pl {{modules.core}} -P{{build.deployBundleProfile}}
 
 # Run only unit tests
-cd {{PROJECT_ROOT}} && mvn test -pl {{modules.core}}
+cd {{PROJECT_ROOT}} && mvn test -T1 -pl {{modules.core}}
 
 # Full build skipping tests
-cd {{PROJECT_ROOT}} && mvn clean install -DskipTests
+cd {{PROJECT_ROOT}} && mvn clean install -T1 -DskipTests
 ```
 
 ### AEM Local Instance

@@ -40,27 +40,27 @@ Before inspecting, verify the test page is available:
 
 1. **Check file system**: Look for the test page directory at:
    ```
-   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/agent-test-{component-name-kebab}/.content.xml
+   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/agent-test-{component-name-kebab}/.content.xml
    ```
 2. **Check AEM instance** (if running): Try fetching the page via cURL:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" -u {{aem.credentials}} "{{aem.authorUrl}}{{jcr.contentLangRoot}}/agent-test-{component-name-kebab}.html"
+   curl -s -o /dev/null -w "%{http_code}" -u {{aem.credentials}} "{{aem.authorUrl}}{{jcr.testPagesRoot}}/agent-test-{component-name-kebab}.html"
    ```
    - `200` → page exists, proceed to inspection
    - `404` or connection error → page does not exist
 
 3. **If the test page does NOT exist**, delegate to `aem-feature` to create it:
 
-   > Create a test page for the **{component-name}** component.
+   > FEATURE: "Create test page for {component-name}"
    >
    > Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
    > Execute ONLY Step 5 (Create Test Page) from the AGENT.md pipeline:
    >
    > - Component: {component-name}
    > - Resource type: {{jcr.componentPath}}/{component-name-kebab}
-   > - Test page path: {{jcr.contentLangRoot}}/agent-test-{component-name-kebab}
+   > - Test page path: {{jcr.testPagesRoot}}/agent-test-{component-name-kebab}
    > - Include TWO instances: one with all fields populated (happy path) and one empty (edge case)
-   > - Build and deploy so the page is available on the author instance
+   > - Build and deploy so the page is available on the author instance (use `-T1` for all Maven commands)
    > - Report back with the authoring URL
 
 4. **Verify creation**: After `aem-feature` reports success, re-check the page (cURL or file system). If still missing, report it as a blocker and stop.
@@ -100,10 +100,15 @@ If issues are found:
 4. If running in **autonomous-fix mode**:
    - Delegate to `aem-feature` with a precise fix request:
      > QA Fix Mode
+     >
+     > Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
+     >
      > Component: {component-name}
      > Fix Cycle: {current_cycle}/{limit}
      > Fix the following numbered issues exactly: {issue list}
-     > Rebuild, redeploy if possible, preserve the same test page, and report back with the updated authoring URL.
+     > Rebuild and redeploy (use `-T1` for all Maven commands). Preserve the same test page.
+     > Report back with: files changed, build/test results, and the authoring URL:
+     > `{{aem.authorUrl}}/editor.html{{jcr.testPagesRoot}}/agent-test-{component-name-kebab}.html`
    - Wait for `aem-feature` to complete fixes and redeploy.
 
 ### 4. Retest Loop

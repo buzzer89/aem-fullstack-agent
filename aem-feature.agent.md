@@ -21,8 +21,10 @@ Before doing ANYTHING else, execute these steps in order:
 
 Take the user's request and choose the correct mode:
 
-- **Feature Mode**: for a new feature/story, execute **all 8 steps** from `AGENT.md`.
-- **QA Fix Mode**: when the request is a numbered defect list from `aem-qa`, fix only those issues on the existing implementation, rerun the required build/tests/deploy/test-page validation, and return an updated report.
+- **Feature Mode**: for a new feature/story (triggered by the `FEATURE:` keyword), execute **all 8 steps** from `AGENT.md`.
+- **QA Fix Mode**: when the request is a numbered defect list from `aem-qa` (triggered by `QA Fix Mode`), fix only those issues on the existing implementation, rerun the required build/tests/deploy/test-page validation, and return an updated report.
+
+**Branch handling**: If the prompt says the branch is "already checked out", do NOT create or switch branches — work on the current branch. If no branch instruction is given, work on the current branch by default.
 
 In Feature Mode, execute:
 
@@ -45,7 +47,8 @@ Then generate the **Step 8 — Final Report** with:
 In **QA Fix Mode**, always return:
 - The numbered issues you addressed
 - Files changed
-- Build/test results
+- Build/test results (use `-T1` for all Maven commands)
+- The authoring URL: `{{aem.authorUrl}}/editor.html{{jcr.testPagesRoot}}/agent-test-{feature-name}.html`
 - Whether the existing test page/authoring URL stayed the same
 - Any remaining blockers for the next QA pass
 

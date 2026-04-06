@@ -116,6 +116,56 @@ def slugify(value: str, fallback: str = "story") -> str:
     return slug or fallback
 
 
+# ---------------------------------------------------------------------------
+# Acceptance-criteria extraction helpers
+# ---------------------------------------------------------------------------
+
+_AC_SECTION_RE = re.compile(
+    r"(?:"
+    r"#+\s*acceptance\s*criteria"              # Markdown heading (## AC) — can appear mid-line
+    r"|(?:^|\n)\s*acceptance\s*criteria\s*[:\-]" # Plain text "Acceptance Criteria:" at line start
+    r"|(?:^|\n)\s*ac\s*[:]"                    # Shorthand "AC:" at line start
+    r"|given\s+.*?\s+when\s+.*?\s+then"        # Gherkin Given/When/Then anywhere
+    r")\s*[:\-]?\s*",
+    re.IGNORECASE,
+)
+
+
+def extract_ac_from_description(description: str) -> str:
+    """Try to pull acceptance criteria out of a description field.
+
+    Strategy:
+    1. Look for an explicit "Acceptance Criteria" / "AC:" heading/section and
+       return everything after it (up to the next markdown heading or EOF).
+    2. Look for Gherkin-style Given/When/Then blocks and return them
+       (including the matched Gherkin text itself).
+    3. If nothing matches, return the full description so downstream consumers
+       still have *something* to work with rather than an empty string.
+    """
+    if not description or not description.strip():
+        return ""
+
+    # Strategy 1 & 2: find an AC-like section
+    match = _AC_SECTION_RE.search(description)
+    if match:
+        matched_text = match.group(0).strip()
+        after = description[match.end():]
+        # Trim at next markdown heading (##) that is NOT itself an AC heading
+        next_heading = re.search(r"\n\s*#{1,6}\s+(?!acceptance)", after, re.IGNORECASE)
+        section = after[: next_heading.start()] if next_heading else after
+        section = section.strip()
+
+        # For Gherkin matches, include the matched Given/When/Then text itself
+        if re.search(r"given\s+", matched_text, re.IGNORECASE):
+            section = (matched_text + " " + section).strip()
+
+        if section:
+            return section
+
+    # Strategy 3: return the full description as fallback context
+    return description.strip()
+
+
 def normalize_header(value: str) -> str:
     value = value or ""
     value = value.strip().lower()
@@ -227,10 +277,23 @@ def normalize_row(
     summary = normalized["summary"]
     description = normalized["description"]
     acceptance_criteria = normalized["acceptance_criteria"]
+
+    # --- AC fallback: derive from description when column is empty ----------
+    ac_derived_from_description = False
+    if not acceptance_criteria and description:
+        acceptance_criteria = extract_ac_from_description(description)
+        if acceptance_criteria:
+            ac_derived_from_description = True
+            normalized["acceptance_criteria"] = acceptance_criteria
+
     jira_key = normalized["jira_key"] or f"ROW-{source_row_number}"
     story_slug = slugify(summary or jira_key, fallback=jira_key.lower())
     prefix = branch_prefix.strip().strip("/") or "feature"
     branch_slug = slugify(f"{jira_key}-{summary}", fallback=jira_key.lower())
+
+    agent_notes = "Needs repo grounding and validation."
+    if ac_derived_from_description:
+        agent_notes = "AC derived from description field. Review for accuracy. " + agent_notes
 
     normalized.update(
         {
@@ -239,10 +302,11 @@ def normalize_row(
             "story_slug": story_slug,
             "agent_summary": build_agent_summary(summary, description, acceptance_criteria),
             "agent_status": "Planned",
-            "agent_notes": "Needs repo grounding and validation.",
+            "agent_notes": agent_notes,
             "agent_branch": f"{prefix}/{branch_slug}",
             "agent_pr_url": "",
             "planned_pr_title": f"[{jira_key}] {summary}".strip(),
+            "ac_derived_from_description": ac_derived_from_description,
         }
     )
     return normalized
@@ -316,7 +380,10 @@ def apply_filters(
         if not include_missing_ac and not has_ac:
             story = dict(story)
             story["agent_status"] = "Needs Clarification"
-            story["agent_notes"] = "Missing acceptance criteria in source export."
+            story["agent_notes"] = (
+                "Missing acceptance criteria in source export and no "
+                "usable AC found in description."
+            )
         filtered.append(story)
     return filtered
 
@@ -361,23 +428,29 @@ def build_aem_feature_prompt(story: dict[str, object]) -> str:
     description = story["description"] or "No description provided."
     acceptance = story["acceptance_criteria"] or "No acceptance criteria provided."
     branch = story["agent_branch"]
+    ac_note = ""
+    if story.get("ac_derived_from_description"):
+        ac_note = "\n(Note: AC was derived from the description field — review for accuracy.)\n"
     return f"""Read `.agent/project.yaml`, `.agent/AGENT.md`, and `.agent/REPO_CONTEXT.md` fully.
-Then implement this Jira story end to end on branch `{branch}`.
+Then execute all 8 steps for this feature. Do NOT stop until the Final Report (Step 8) is generated.
+
+FEATURE: "{summary}"
 
 Jira Key: {key}
-Summary: {summary}
+Branch: `{branch}` (already checked out — do NOT create a new branch)
+Test page root: `{{{{jcr.testPagesRoot}}}}` (resolve from project.yaml; if missing or unclear, ask the user for the language/content root and create `/test-pages` beneath it)
+
 Description:
 {description}
 
-Acceptance Criteria:
+Acceptance Criteria:{ac_note}
 {acceptance}
 
 Required output:
-- Files created/updated
-- Build/test results with real command output summaries
+- All files created/updated
+- Build/test results with real command output (use `-T1` for all Maven commands)
 - Test page URL and authoring URL
 - Any blockers or assumptions
-- If the test-page root is unclear, ask for the desired language/content root and create `/test-pages` beneath it
 """
 
 

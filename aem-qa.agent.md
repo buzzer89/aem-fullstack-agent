@@ -26,7 +26,7 @@ The caller may choose one of these modes:
    ```
 3. **Read the component spec**: Search for the component's HTL, dialog, and Sling Model to understand what the component should render (fields, selectors, expected behavior).
 4. **Check test-page resolvability**:
-   - If the expected authoring URL or `{{jcr.testPagesRoot}}` is missing and you cannot infer the right language root from the repo, ask the user for the desired content root path (for example `/content/site/us/en`).
+   - **MANDATORY:** Always ask the user for the content root path of their site in the local codebase (e.g. `/content/site/us/en`) before any test page creation or validation. Do not guess.
    - Once the user provides it, use `/test-pages` beneath that root for all agent-created QA pages.
 5. **Read the cycle budget**:
    - If the caller provides `Fix Cycle Limit: N`, honor that exact limit.
@@ -128,7 +128,7 @@ If the cycle budget is exhausted and issues remain unresolved, generate a final 
 - DO NOT modify existing test pages or content directly — only read and inspect. Test page *creation* is delegated to `aem-feature`
 - DO NOT skip the component spec read — you need it to know what "correct" looks like
 - Prefer the authoring (`editor.html`) view, but if browser tooling is unavailable you may inspect the rendered page HTML directly and must state that the result is a partial/manual visual validation
-- If the test-page root is ambiguous, ask the user for the language/content root instead of guessing
+- **MANDATORY:** Always ask the user for the content root path before creating or validating test pages — never guess the path
 - In report-only mode, ALWAYS return the issue list to the caller instead of silently stopping
 - In autonomous-fix mode, ALWAYS honor the caller-provided fix-cycle limit when one is supplied
 

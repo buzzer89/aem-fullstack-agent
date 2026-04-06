@@ -57,7 +57,7 @@ In **QA Fix Mode**, always return:
 - **Do NOT stop** until the Final Report (Step 8) is generated
 - **Do NOT fake** build or test results — run real commands
 - **Do NOT modify** existing content pages — always create dedicated test pages
-- If the test page root is unclear or missing, ask the user for the site root path (e.g. `/content/site/us/en`), inspect 2–3 existing pages under it to learn the authoring structure, then create `/test-pages` beneath it
+- **MANDATORY:** Before creating any test page, ask the user for the content root path of their site in the local codebase (e.g. `/content/site/us/en`), inspect 2–3 existing pages under it to learn the authoring structure, then use that structure when creating test pages
 - **Iterate** on failures — fix and rebuild until success
 - **Use existing patterns** from REPO_CONTEXT.md, not generic best practices
 - If the user provides only a brief description, infer reasonable defaults and proceed

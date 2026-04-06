@@ -236,14 +236,14 @@ Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk
 
 **⚠️ CRITICAL: NEVER modify existing content pages. Always create a DEDICATED test page.**
 
-#### Step 5a — Learn from existing content pages
+#### Step 5a — Learn from existing content pages (MANDATORY)
 
-Before creating the test page, study how the project actually authors content:
+**⚠️ BLOCKING: You MUST complete Step 5a before creating any test page. Do NOT skip this step.**
 
-1. **Ask the user** (one concise question):
-   > What is the root path of your site? (e.g. `/content/mysite/us/en`)
+1. **Ask the user** (one concise question) — this is mandatory, do not guess or assume:
+   > What is the content root path of your site in the local codebase? (e.g. `/content/mysite/us/en`)
 
-   Use the answer as `{siteRoot}`.
+   **Wait for the user's answer.** Use the response as `{siteRoot}`. Do NOT proceed until you have this answer.
 
 2. **Locate the content on disk** at:
    ```
@@ -263,9 +263,9 @@ Before creating the test page, study how the project actually authors content:
    - Actual template / resource type values (may differ from `project.yaml` defaults).
    - Property naming style (camelCase vs kebab-case, abbreviated vs full names).
 
-5. **Apply what you learned** — when creating the test page below, mirror the container structure and page template you observed rather than only relying on `project.yaml` placeholders. If the observed values conflict with `project.yaml`, prefer what is actually in the repo.
+5. **Apply what you learned** — when creating the test page below, mirror the container structure and page template you observed rather than only relying on `project.yaml` placeholders. If the observed values conflict with `project.yaml`, **prefer what is actually in the repo**.
 
-> **Skip condition:** If the user has already provided a reference page path, or if this is a QA-fix rerun where the test page already exists, skip Step 5a.
+> **QA-fix rerun exception:** If this is a QA-fix rerun where the test page already exists and only component properties are being updated, you may skip the user question (you already have the site root from the previous run) but you must still re-read at least 1 existing page to confirm the container structure before editing the test page.
 
 ---
 
@@ -299,9 +299,10 @@ The `ui.content` filter typically uses `mode="merge"` for `{{jcr.contentRoot}}`,
 **If `build.contentFilterMode` is `replace`**, you MUST add a filter entry or the page will be deleted on next install. Check `project.yaml` before proceeding.
 
 **Root resolution rules:**
-- If `{{jcr.testPagesRoot}}` is present and sensible, use it.
-- If `{{jcr.testPagesRoot}}` does not exist yet but `{{jcr.contentLangRoot}}` is valid, create `{{jcr.testPagesRoot}}` first and place all agent pages beneath it.
-- If neither the language root nor test page root is trustworthy, ask the user **one concise question** for the authoring root path (for example `/content/site/us/en` or `/content/site/en`). Then create `/test-pages` beneath that path and continue.
+- You MUST have completed Step 5a (asked the user for the site root and inspected existing pages) before reaching this point.
+- If `{{jcr.testPagesRoot}}` is present and its structure matches what you observed in Step 5a, use it.
+- If `{{jcr.testPagesRoot}}` does not exist yet, create it under the site root the user provided in Step 5a: `{siteRoot}/test-pages`.
+- Always verify the test page template/container structure matches the patterns you learned in Step 5a.
 
 **Steps:**
 

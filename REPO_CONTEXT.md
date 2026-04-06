@@ -665,21 +665,29 @@ mycomponent.js
 
 **⚠️ NEVER modify existing content pages. Always create a dedicated test page.**
 
-### 13a. Learn from existing pages first
+### 13a. Learn from existing pages first (MANDATORY)
 
-Before creating a test page, ask the user for their site root path (e.g. `/content/mysite/us/en`), then read 2–3 existing `.content.xml` pages under:
-```
-{{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/
-```
-Study the page template, container nesting pattern, and component authoring conventions. Mirror what you find in your test page rather than only relying on the template below.
+**⚠️ BLOCKING: You MUST complete this step before creating any test page. Do NOT skip.**
+
+1. **Ask the user** for the content root path of their site in the local codebase (e.g. `/content/mysite/us/en`). **Wait for the answer — do not guess.**
+2. Read 2–3 existing `.content.xml` pages under:
+   ```
+   {{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/
+   ```
+3. Study and record:
+   - Page template (`cq:template`) and page resource type
+   - Container nesting pattern (`jcr:content` → where components live)
+   - Component property naming conventions
+   - Responsive grid / layout markers
+4. Mirror what you find in your test page — **prefer observed patterns over the template below** when they conflict.
 
 ### 13b. Test page location
 
 Use `{{jcr.testPagesRoot}}` as the dedicated parent for all agent-created pages.
 
-If the path does not exist yet, create:
+If the path does not exist yet, create it under the site root the user provided in 13a:
 ```
-{{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/
+{{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/test-pages/
 ```
 
 Then create the feature test page under:
@@ -687,7 +695,7 @@ Then create the feature test page under:
 {{modules.uiContent}}/src/main/content/jcr_root{{jcr.testPagesRoot}}/agent-test-{feature-name}/
 ```
 
-If `{{jcr.testPagesRoot}}` is missing or clearly wrong and you cannot infer a safe authoring root from the repo, ask the user for the desired `/en` or language-root path and create `/test-pages` beneath it before proceeding.
+Always verify the test page template and container structure matches the patterns you learned in 13a.
 
 ### Full test page template:
 ```xml

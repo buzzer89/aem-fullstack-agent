@@ -67,14 +67,25 @@ Verify the generated workbook contains these columns on the `Jira Import` sheet:
 
 ## Phase 2 — Repo Analysis
 
-### Step 3: Reconnaissance
+### Execution Modes
+
+This phase has two modes:
+
+| Mode | When | What it does |
+|------|------|--------------|
+| **Full** (default) | `jira-planner` invoked directly by the user | Full per-ticket repo search; fills all 20 Dev Plan columns |
+| **Light** | Caller says "light plan" or "skip repo analysis" | Skip Steps 3–4 entirely; leave `Repo Areas Impacted`, `Existing Code References`, `Implementation Steps` blank — `aem-feature` will discover these on its own |
+
+**Why light mode exists:** `aem-feature` performs its own repo reconnaissance in Step 1 of the AGENT.md pipeline. Doing a deep search for every ticket in the planner *and then again* in the builder doubles the work for no benefit. When called from `aem-fullstack`, always use light mode.
+
+### Step 3: Reconnaissance (skip in light mode)
 
 Using workspace tools:
 1. Identify stack from build files and `.agent/project.yaml`.
 2. Map folder layout: business logic, UI/components, tests, configs.
 3. Detect validation commands (Maven profiles, npm scripts).
 
-### Step 4: Ground Each Ticket
+### Step 4: Ground Each Ticket (skip in light mode)
 
 For each Jira item, search the repo for:
 - Relevant keywords/entities
@@ -96,9 +107,9 @@ Create worksheet **"Dev Plan (Agent Output)"** with columns:
 | Priority | Priority level |
 | Acceptance Criteria | Verbatim or derived |
 | Assumptions / Missing Info | Questions, gaps |
-| Repo Areas Impacted | Real file paths found |
-| Existing Code References | Classes, patterns to follow |
-| Implementation Steps | Numbered, dev-ready |
+| Repo Areas Impacted | Real file paths found (blank in light mode) |
+| Existing Code References | Classes, patterns to follow (blank in light mode) |
+| Implementation Steps | Numbered, dev-ready (blank in light mode — aem-feature discovers) |
 | Test Plan | Unit/integration/e2e |
 | Rollout / Feature Flag Notes | Deployment concerns |
 | Risk & Edge Cases | What could go wrong |
@@ -117,11 +128,13 @@ For each story, generate TWO prompts:
 
 **A) Prompt for aem-feature** (executable, repo-specific):
 - Repo context from project.yaml (stack, conventions)
-- Concrete file paths/symbols to start from
-- Step-by-step tasks
+- Concrete file paths/symbols to start from (if available from Step 4; otherwise aem-feature will discover)
+- Step-by-step tasks (if available; otherwise delegate discovery to aem-feature)
 - Acceptance criteria checklist
 - Test/validation instructions
 - Output requirement: list changed files + test results
+
+> **Light mode:** The prompt is still generated, but it focuses on *what* to build (AC, feature description, Jira key, branch) rather than *where* in the codebase (file paths, classes). aem-feature will discover the "where" via its own Step 1.
 
 **B) Prompt for Copilot/Claude** (shorter, dev-paste-ready):
 - Key files/patterns to follow

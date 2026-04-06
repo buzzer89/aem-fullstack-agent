@@ -71,7 +71,7 @@ Optionally:
 
 Delegate to **`jira-planner`** with the following instructions:
 
-> Parse the Jira export at `{file_path}`. Produce the Dev Plan worksheet with implementation prompts. Do NOT orchestrate implementation — return the plan to me. Apply ticket filters: `{filters if any}`.
+> Parse the Jira export at `{file_path}`. Produce the Dev Plan worksheet with implementation prompts. **Use light plan mode — skip repo analysis (Steps 3–4).** aem-feature will do its own repo reconnaissance. Do NOT orchestrate implementation — return the plan to me. Apply ticket filters: `{filters if any}`.
 
 Wait for `jira-planner` to return the plan. Extract from the output:
 - List of stories with their Jira Keys, titles, and acceptance criteria

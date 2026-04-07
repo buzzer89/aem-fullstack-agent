@@ -57,7 +57,7 @@ In **QA Fix Mode**, always return:
 - **Do NOT stop** until the Final Report (Step 8) is generated
 - **Do NOT fake** build or test results — run real commands
 - **Do NOT modify** existing content pages — always create dedicated test pages
-- **MANDATORY:** Before creating any test page, ask the user for the content root path of their site in the local codebase (e.g. `/content/site/us/en`), inspect 2–3 existing pages under it to learn the authoring structure, then use that structure when creating test pages
+- **Test page root:** Use `{{jcr.contentLangRoot}}` from `project.yaml` as the site root. Verify the path exists in `{{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/`. Inspect 2–3 existing pages there to learn the authoring structure before creating any test page. Only ask the user if the path does not exist on disk.
 - **Iterate** on failures — fix and rebuild until success
 - **Use existing patterns** from REPO_CONTEXT.md, not generic best practices
 - If the user provides only a brief description, infer reasonable defaults and proceed

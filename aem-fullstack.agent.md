@@ -140,7 +140,7 @@ Invoke **`aem-feature`** with this template:
 > FEATURE: "{feature description with AC}"
 >
 > Branch: `{branch-name}` (already checked out — do NOT create a new branch)
-> Test page root: `{{jcr.testPagesRoot}}` — **MANDATORY: ask the user for the content root path of their site before creating any test page; inspect 2–3 existing pages under it to learn the authoring structure (see Step 5a in AGENT.md)**
+> Test page root: `{{jcr.testPagesRoot}}` — use `{{jcr.contentLangRoot}}` from project.yaml as the site root; inspect 2–3 existing pages under it to learn the authoring structure before creating the test page (see Step 5a in AGENT.md).
 >
 > Required output: all files created/modified, build status (use `-T1` for all Maven commands), test results, authoring URL.
 

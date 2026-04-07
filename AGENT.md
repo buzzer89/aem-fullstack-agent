@@ -81,6 +81,10 @@ Rules:
 1. Read `.agent/project.yaml` fully
 2. Resolve all `{{placeholder}}` values for this project
 3. Verify the `aem.type` — it affects Java version, OSGi config paths, and deploy profiles
+4. Resolve `{{PROJECT_ROOT}}`:
+   - Use the `projectRoot` key from `project.yaml` if it is set and the directory exists on disk.
+   - Otherwise, derive it as the directory that **contains the `.agent/` folder** — i.e., the workspace root in VS Code, or the directory you ran setup.sh from.
+   - All `cd {{PROJECT_ROOT}}` commands in this file use this resolved absolute path.
 
 **AEM Version Awareness:**
 
@@ -240,10 +244,15 @@ Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk
 
 **⚠️ BLOCKING: You MUST complete Step 5a before creating any test page. Do NOT skip this step.**
 
-1. **Ask the user** (one concise question) — this is mandatory, do not guess or assume:
-   > What is the content root path of your site in the local codebase? (e.g. `/content/mysite/us/en`)
-
-   **Wait for the user's answer.** Use the response as `{siteRoot}`. Do NOT proceed until you have this answer.
+1. **Resolve the site root** using this decision tree (do NOT ask unless resolution fails):
+   - **Use `{{jcr.contentLangRoot}}` from project.yaml** as `{siteRoot}`. Verify the path exists on disk at:
+     ```
+     {{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/
+     ```
+   - If the path **does not exist**, check `{{jcr.contentRoot}}` instead (one level up).
+   - If **neither path exists**, then ask the user:
+     > The content root path in project.yaml (`{{jcr.contentLangRoot}}`) does not exist in the local codebase. What is the correct path? (e.g. `/content/mysite/us/en`)
+   - Once confirmed, use that path as `{siteRoot}` for the rest of this step.
 
 2. **Locate the content on disk** at:
    ```
@@ -265,7 +274,7 @@ Note: `{{PROJECT_ROOT}}` is the actual absolute path to the project root on disk
 
 5. **Apply what you learned** — when creating the test page below, mirror the container structure and page template you observed rather than only relying on `project.yaml` placeholders. If the observed values conflict with `project.yaml`, **prefer what is actually in the repo**.
 
-> **QA-fix rerun exception:** If this is a QA-fix rerun where the test page already exists and only component properties are being updated, you may skip the user question (you already have the site root from the previous run) but you must still re-read at least 1 existing page to confirm the container structure before editing the test page.
+> **QA-fix rerun exception:** If this is a QA-fix rerun where the test page already exists and only component properties are being updated, you may skip the site root resolution (use `{{jcr.contentLangRoot}}` directly) but you must still re-read at least 1 existing page to confirm the container structure before editing the test page.
 
 ---
 
@@ -299,9 +308,9 @@ The `ui.content` filter typically uses `mode="merge"` for `{{jcr.contentRoot}}`,
 **If `build.contentFilterMode` is `replace`**, you MUST add a filter entry or the page will be deleted on next install. Check `project.yaml` before proceeding.
 
 **Root resolution rules:**
-- You MUST have completed Step 5a (asked the user for the site root and inspected existing pages) before reaching this point.
-- If `{{jcr.testPagesRoot}}` is present and its structure matches what you observed in Step 5a, use it.
-- If `{{jcr.testPagesRoot}}` does not exist yet, create it under the site root the user provided in Step 5a: `{siteRoot}/test-pages`.
+- You MUST have completed Step 5a (resolved and verified the site root, inspected existing pages) before reaching this point.
+- Use `{{jcr.testPagesRoot}}` from project.yaml as the dedicated test pages root.
+- If that path does not exist yet on disk, create it under `{siteRoot}/test-pages` (where `{siteRoot}` was resolved in Step 5a).
 - Always verify the test page template/container structure matches the patterns you learned in Step 5a.
 
 **Steps:**

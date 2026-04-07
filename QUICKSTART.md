@@ -299,21 +299,28 @@ If a module can't be classified by content inspection, the scanner falls back to
 ```
 your-aem-project/
 ├── .agent/
-│   ├── project.yaml       ← Generated (project-specific config)
-│   ├── AGENT.md            ← Installed (generic pipeline)
-│   ├── REPO_CONTEXT.md     ← Installed (generic patterns)
-│   ├── QUICKSTART.md       ← Installed (this file)
-│   ├── jira_plan.py        ← Installed Jira intake helper
-│   └── universal/          ← Source files (distribute to other teams)
+│   ├── project.yaml            ← Generated (project-specific config)
+│   ├── AGENT.md                ← Installed (generic pipeline)
+│   ├── REPO_CONTEXT.md         ← Installed (generic patterns)
+│   ├── QUICKSTART.md           ← Installed (this file)
+│   ├── jira_plan.py            ← Installed Jira intake helper
+│   └── universal/              ← Source files (distribute to other teams)
+│       ├── install.sh
 │       ├── setup.sh
 │       ├── AGENT.md
 │       ├── REPO_CONTEXT.md
 │       ├── QUICKSTART.md
 │       ├── jira_plan.py
-│       └── aem-feature.agent.md
+│       ├── aem-feature.agent.md
+│       ├── aem-qa.agent.md
+│       ├── aem-fullstack.agent.md
+│       └── jira-planner.agent.md
 ├── .github/
 │   └── agents/
-│       └── aem-feature.agent.md  ← Custom Agent Mode (auto-installed)
+│       ├── aem-feature.agent.md    ← Build AEM features end-to-end
+│       ├── aem-qa.agent.md         ← Visual QA validation
+│       ├── aem-fullstack.agent.md  ← Plan → Build → QA → PR pipeline
+│       └── jira-planner.agent.md   ← Jira → dev plans → PRs
 ├── core/
 ├── ui.apps/
 ├── ui.content/

@@ -669,7 +669,13 @@ mycomponent.js
 
 **⚠️ BLOCKING: You MUST complete this step before creating any test page. Do NOT skip.**
 
-1. **Ask the user** for the content root path of their site in the local codebase (e.g. `/content/mysite/us/en`). **Wait for the answer — do not guess.**
+1. **Resolve the site root** — use `{{jcr.contentLangRoot}}` from `project.yaml` as `{siteRoot}`.
+   Verify the directory exists on disk at:
+   ```
+   {{modules.uiContent}}/src/main/content/jcr_root{{jcr.contentLangRoot}}/
+   ```
+   If it does not exist, check `{{jcr.contentRoot}}` one level up.
+   Only ask the user if neither path exists in the local codebase.
 2. Read 2–3 existing `.content.xml` pages under:
    ```
    {{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/
@@ -683,9 +689,9 @@ mycomponent.js
 
 ### 13b. Test page location
 
-Use `{{jcr.testPagesRoot}}` as the dedicated parent for all agent-created pages.
+Use `{{jcr.testPagesRoot}}` from `project.yaml` as the dedicated parent for all agent-created pages.
 
-If the path does not exist yet, create it under the site root the user provided in 13a:
+If that path does not exist yet on disk, create it under the site root resolved in 13a:
 ```
 {{modules.uiContent}}/src/main/content/jcr_root{siteRoot}/test-pages/
 ```
